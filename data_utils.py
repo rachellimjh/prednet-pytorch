@@ -50,7 +50,7 @@ class KittiDataset(Dataset):
         return len(self.possible_starts)
 
     def __getitem__(self, idx):
-        start_idx = self.possible_starts[idx]
+        start_idx = np.random.choice(self.possible_starts)
         end_idx = start_idx + self.nt
         
         # Get sequence: (Time, Height, Width, Channels)

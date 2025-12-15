@@ -31,6 +31,9 @@ decay_epoch = 75
 num_workers = 2
 print_interval = 100  # Print progress every 100 batches
 
+SAMPLES_PER_EPOCH = 500
+MAX_BATCHES = SAMPLES_PER_EPOCH // batch_size
+
 # Data Files
 train_file = os.path.join(DATA_DIR, 'X_train.hkl')
 train_sources = os.path.join(DATA_DIR, 'sources_train.hkl')
@@ -79,7 +82,7 @@ train_loader = DataLoader(
     num_workers=num_workers,
     pin_memory=True
 )
-
+# print("Sequences per epoch ", len(train_dataset))
 print("Loading Validation Data...")
 val_dataset = KittiDataset(val_file, val_sources, nt, sequence_start_mode='unique', N_seq=100)
 val_loader = DataLoader(
@@ -120,6 +123,8 @@ for epoch in range(nb_epoch):
     
     # Enumerate to get batch index (i)
     for i, inputs in enumerate(train_loader):
+        if i >= MAX_BATCHES:
+            break
         inputs = inputs.to(device)
         
         optimizer.zero_grad()

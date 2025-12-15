@@ -70,6 +70,15 @@ class PredNet (nn.Module):
         self.upsample=nn.Upsample(scale_factor=2)
         self.pool=nn.MaxPool2d(kernel_size=2,stride=2)
 
+        self._init_weights()
+        
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+                    
     def _get_activation(self, name):
         if name == 'relu': return F.relu
         if name == 'tanh': return torch.tanh
@@ -137,10 +146,13 @@ class PredNet (nn.Module):
         frame_prediction = None
         
         for l in range(self.nb_layers):
-            ahat=self.conv_layers['ahat'][l](r[l])
-            if l==0:
-                ahat=torch.min(ahat, torch.tensor(self.pixel_max).to(ahat.device)) # cap pixel values
-                frame_prediction=ahat
+            ahat = self.conv_layers['ahat'][l](r[l])
+            if l == 0:
+                ahat = F.relu(ahat)
+                ahat = torch.clamp(ahat, max=self.pixel_max)
+            else:
+                ahat = self.A_activation(ahat)
+
             # computing e
             e_up=self.error_activation(ahat-a)
             e_down=self.error_activation(a-ahat)
@@ -187,6 +199,7 @@ class PredNet (nn.Module):
             output_list.append(step_output)
             
         return torch.stack(output_list, dim=1)
+
 
 if __name__ == '__main__':
     # 1. Define Model Hyperparameters
