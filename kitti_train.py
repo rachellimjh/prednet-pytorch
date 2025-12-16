@@ -145,8 +145,8 @@ for epoch in range(nb_epoch):
         if (i + 1) % print_interval == 0:
             print(f"Epoch {epoch+1} | Batch {i+1}/{num_train_batches} | Loss: {loss.item():.6f}")
         
-    avg_train_loss = epoch_loss / len(train_loader)
-    
+    avg_train_loss = epoch_loss / MAX_BATCHES
+
     # --- Validation ---
     print("Running Validation...")
     model.eval()

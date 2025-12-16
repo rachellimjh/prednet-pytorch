@@ -150,6 +150,7 @@ class PredNet (nn.Module):
             if l == 0:
                 ahat = F.relu(ahat)
                 ahat = torch.clamp(ahat, max=self.pixel_max)
+                frame_prediction = ahat
             else:
                 ahat = self.A_activation(ahat)
 
