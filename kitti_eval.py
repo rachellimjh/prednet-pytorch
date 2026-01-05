@@ -8,7 +8,7 @@ import matplotlib.gridspec as gridspec
 from torch.utils.data import DataLoader
 
 from prednet import PredNet
-from data_utils import KittiDataset
+from kitti_dataset import KittiDataset
 from kitti_settings import *
 
 # --- Setup ---
