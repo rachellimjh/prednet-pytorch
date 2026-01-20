@@ -26,7 +26,7 @@ TRAIN_ID_VERTICAL = {
 
 ID_APPEAR = {
     "digit_range": list(range(0, 5)),
-    "num_digits": 1,          # start with 1 → appear to 2
+    "num_digits": 2,          # 2 → 3 digits
     "motion": "free",
     "collision_mode": "bounce",
     "anomaly": "appear"
@@ -34,7 +34,7 @@ ID_APPEAR = {
 
 ID_DISAPPEAR = {
     "digit_range": list(range(0, 5)),
-    "num_digits": 2,
+    "num_digits": 2,          # 2 → 1 digit
     "motion": "free",
     "collision_mode": "bounce",
     "anomaly": "disappear"
@@ -44,14 +44,14 @@ ID_STICK = {
     "digit_range": list(range(0, 5)),
     "num_digits": 2,
     "motion": "free",
-    "collision_mode": "bounce",
+    "collision_mode": "slide",   # sticking anomaly
     "anomaly": "stick"
 }
 
 # Vertical variants
 ID_APPEAR_VERTICAL = {
     "digit_range": list(range(0, 5)),
-    "num_digits": 1,
+    "num_digits": 2,
     "motion": "vertical",
     "collision_mode": "bounce",
     "anomaly": "appear"
@@ -69,7 +69,7 @@ ID_STICK_VERTICAL = {
     "digit_range": list(range(0, 5)),
     "num_digits": 2,
     "motion": "vertical",
-    "collision_mode": "bounce",
+    "collision_mode": "slide",
     "anomaly": "stick"
 }
 
@@ -79,8 +79,8 @@ ID_STICK_VERTICAL = {
 
 OOD_APPEAR = {
     "digit_range": list(range(5, 10)),
-    "num_digits": 1,
-    "motion": "horizontal",
+    "num_digits": 2,
+    "motion": "free",
     "collision_mode": "bounce",
     "anomaly": "appear"
 }
@@ -88,7 +88,7 @@ OOD_APPEAR = {
 OOD_DISAPPEAR = {
     "digit_range": list(range(5, 10)),
     "num_digits": 2,
-    "motion": "horizontal",
+    "motion": "free",
     "collision_mode": "bounce",
     "anomaly": "disappear"
 }
@@ -96,8 +96,33 @@ OOD_DISAPPEAR = {
 OOD_STICK = {
     "digit_range": list(range(5, 10)),
     "num_digits": 2,
+    "motion": "free",
+    "collision_mode": "slide",
+    "anomaly": "stick"
+}
+
+# Horizontal bouncing variants
+OOD_APPEAR_HORIZONTAL = {
+    "digit_range": list(range(5, 10)),
+    "num_digits": 2,
     "motion": "horizontal",
     "collision_mode": "bounce",
+    "anomaly": "appear"
+}
+
+OOD_DISAPPEAR_HORIZONTAL = {
+    "digit_range": list(range(5, 10)),
+    "num_digits": 2,
+    "motion": "horizontal",
+    "collision_mode": "bounce",
+    "anomaly": "disappear"
+}
+
+OOD_STICK_HORIZONTAL = {
+    "digit_range": list(range(5, 10)),
+    "num_digits": 2,
+    "motion": "horizontal",
+    "collision_mode": "slide",
     "anomaly": "stick"
 }
 
@@ -109,6 +134,14 @@ ID_NORMAL = {
     "digit_range": list(range(0, 5)),
     "num_digits": 2,
     "motion": "free",
+    "collision_mode": "bounce",
+    "anomaly": None
+}
+
+ID_NORMAL_VERTICAL = {
+    "digit_range": list(range(0, 5)),
+    "num_digits": 2,
+    "motion": "vertical",
     "collision_mode": "bounce",
     "anomaly": None
 }

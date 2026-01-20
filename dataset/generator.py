@@ -19,25 +19,47 @@ class DigitObject:
         if not self.active:
             return
 
+        # Restrict motion
         if motion == "vertical":
             self.vx = 0
         elif motion == "horizontal":
             self.vy = 0
 
+        # Move
         self.x += self.vx
         self.y += self.vy
 
-        if self.x <= 0 or self.x + DIGIT_SIZE >= IMG_SIZE:
+        # ---- Wall collision ----
+        # Left / right wall
+        if self.x <= 0:
+            self.x = 0
+            if collision_mode == "bounce":
+                self.vx *= -1
+            else:  # slide
+                self.vx = 0
+
+        elif self.x + DIGIT_SIZE >= IMG_SIZE:
+            self.x = IMG_SIZE - DIGIT_SIZE
             if collision_mode == "bounce":
                 self.vx *= -1
             else:
                 self.vx = 0
 
-        if self.y <= 0 or self.y + DIGIT_SIZE >= IMG_SIZE:
+        # Top / bottom wall
+        if self.y <= 0:
+            self.y = 0
             if collision_mode == "bounce":
                 self.vy *= -1
             else:
                 self.vy = 0
+
+        elif self.y + DIGIT_SIZE >= IMG_SIZE:
+            self.y = IMG_SIZE - DIGIT_SIZE
+            if collision_mode == "bounce":
+                self.vy *= -1
+            else:
+                self.vy = 0
+
 
 
 def overlap(o1, o2):
@@ -49,17 +71,29 @@ def overlap(o1, o2):
     )
 
 
-def handle_object_collision(o1, o2, collision_mode):
-    if not (o1.active and o2.active):
+def handle_object_collision(objects, collision_mode):
+    """Handle collisions between all active objects"""
+    active_objects = [obj for obj in objects if obj.active]
+    
+    if collision_mode == "slide":
         return
+    
+    # Check all pairs of active objects
+    for i in range(len(active_objects)):
+        for j in range(i + 1, len(active_objects)):
+            o1, o2 = active_objects[i], active_objects[j]
+            
+            if overlap(o1, o2):
+                # Bounce: swap velocities
+                o1.vx, o2.vx = o2.vx, o1.vx
+                o1.vy, o2.vy = o2.vy, o1.vy
 
-    if overlap(o1, o2):
-        if collision_mode == "bounce":
-            o1.vx, o2.vx = o2.vx, o1.vx
-            o1.vy, o2.vy = o2.vy, o1.vy
-        else:
-            o1.vx = o1.vy = 0
-            o2.vx = o2.vy = 0
+                # Separate objects to avoid jitter
+                o1.x += o1.vx
+                o1.y += o1.vy
+                o2.x += o2.vx
+                o2.y += o2.vy
+
 
 
 def render(objects):
@@ -86,50 +120,91 @@ def render(objects):
 
 
 def generate_sequence(mnist_by_digit, config):
-    """
-    mnist_by_digit: dict[int] -> list of digit images
-    config: one of the configs above
-    """
-
     objects = []
+    
+    # ---- Determine number of objects needed ----
+    max_objects = 2  # Default
+    num_active = config["num_digits"]
+    
+    if config.get("anomaly") == "appear":
+        max_objects = 3  # Need 3 total: 2 active + 1 inactive
+        num_active = 2   # Start with 2 active
+    elif config.get("anomaly") == "disappear":
+        max_objects = 2  # Need 2 total
+        num_active = 2   # Start with 2 active, will become 1
 
-    for i in range(2):  # max 2 digits
+    # ---- Create objects ----
+    for i in range(max_objects):
         digit = random.choice(config["digit_range"])
         img = random.choice(mnist_by_digit[digit])
 
-        x, y = random.randint(0, 48), random.randint(0, 48)
-        vx, vy = random.choice([-2, 2]), random.choice([-2, 2])
-        active = i < config["num_digits"]
+        x = random.randint(0, IMG_SIZE - DIGIT_SIZE)
+        y = random.randint(0, IMG_SIZE - DIGIT_SIZE)
+        vx = random.choice([-2, 2])
+        vy = random.choice([-2, 2])
 
+        active = i < num_active
         objects.append(DigitObject(img, x, y, vx, vy, active))
 
+    # ---- Fix: Position objects to guarantee collision for slide anomaly ----
+    if config.get("anomaly") == "slide" and config["num_digits"] == 2:
+        # Keep random velocities, but position objects to collide
+        # Place them on opposite sides, moving toward center
+        objects[0].x = 5
+        objects[0].y = IMG_SIZE // 2 - DIGIT_SIZE // 2
+        objects[0].vx = 2
+        objects[0].vy = random.choice([-2, 2])  # Keep vertical motion
+        
+        objects[1].x = IMG_SIZE - DIGIT_SIZE - 5
+        objects[1].y = IMG_SIZE // 2 - DIGIT_SIZE // 2
+        objects[1].vx = -2
+        objects[1].vy = random.choice([-2, 2])  # Keep vertical motion
+
+    collision_mode = config["collision_mode"]
     anomaly_frame = SEQ_LEN // 2
     frames = []
 
     for t in range(SEQ_LEN):
-
-        if config["anomaly"] and t == anomaly_frame:
-            if config["anomaly"] == "stick":
-                config["collision_mode"] = "stick"
+        # ---- Anomaly injection ----
+        if config.get("anomaly") and t == anomaly_frame:
+            if config["anomaly"] == "slide":
+                collision_mode = "slide"
             elif config["anomaly"] == "disappear":
-                objects[0].active = False
+                # Make first active object disappear (2 → 1)
+                for obj in objects:
+                    if obj.active:
+                        obj.active = False
+                        break
             elif config["anomaly"] == "appear":
-                objects[1].active = True
+                for obj in objects:
+                    if not obj.active:
+                        obj.active = True
 
+                        # Try multiple times to find non-overlapping position
+                        for _ in range(10):
+                            obj.x = random.randint(0, IMG_SIZE - DIGIT_SIZE)
+                            obj.y = random.randint(0, IMG_SIZE - DIGIT_SIZE)
+
+                            if not any(
+                                overlap(obj, other)
+                                for other in objects
+                                if other.active and other is not obj
+                            ):
+                                break
+
+                        obj.vx = random.choice([-2, 2])
+                        obj.vy = random.choice([-2, 2])
+
+                        break
+
+        # ---- Step simulation ----
         for obj in objects:
-            obj.step(config["motion"], config["collision_mode"])
+            obj.step(config["motion"], collision_mode)
 
-        handle_object_collision(objects[0], objects[1], config["collision_mode"])
+        # ---- Handle collisions between all active objects ----
+        handle_object_collision(objects, collision_mode)
+            
         frames.append(render(objects))
 
     return np.stack(frames)
 
-from load_mnist import load_mnist_by_digit
-from generator import generate_sequence
-from visualize import save_gif
-from config import ID_APPEAR
-
-mnist_by_digit = load_mnist_by_digit()
-seq = generate_sequence(mnist_by_digit, ID_APPEAR)
-
-save_gif(seq, "ID_APPEAR_example.gif")
