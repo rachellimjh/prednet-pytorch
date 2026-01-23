@@ -13,7 +13,7 @@ TRAIN_ID = {
 }
 
 TRAIN_ID_VERTICAL = {
-    "digit_range": list(range(0, 5)),
+    "digit_range": list(range(0, 10)), # digits are as per normal
     "num_digits": 2,
     "motion": "vertical",
     "collision_mode": "bounce",
@@ -50,7 +50,7 @@ ID_STICK = {
 
 # Vertical variants
 ID_APPEAR_VERTICAL = {
-    "digit_range": list(range(0, 5)),
+    "digit_range": list(range(0, 10)),
     "num_digits": 2,
     "motion": "vertical",
     "collision_mode": "bounce",
@@ -58,7 +58,7 @@ ID_APPEAR_VERTICAL = {
 }
 
 ID_DISAPPEAR_VERTICAL = {
-    "digit_range": list(range(0, 5)),
+    "digit_range": list(range(0, 10)),
     "num_digits": 2,
     "motion": "vertical",
     "collision_mode": "bounce",
@@ -66,7 +66,7 @@ ID_DISAPPEAR_VERTICAL = {
 }
 
 ID_STICK_VERTICAL = {
-    "digit_range": list(range(0, 5)),
+    "digit_range": list(range(0, 10)),
     "num_digits": 2,
     "motion": "vertical",
     "collision_mode": "slide",
@@ -103,7 +103,7 @@ OOD_STICK = {
 
 # Horizontal bouncing variants
 OOD_APPEAR_HORIZONTAL = {
-    "digit_range": list(range(5, 10)),
+    "digit_range": list(range(0, 10)),
     "num_digits": 2,
     "motion": "horizontal",
     "collision_mode": "bounce",
@@ -111,7 +111,7 @@ OOD_APPEAR_HORIZONTAL = {
 }
 
 OOD_DISAPPEAR_HORIZONTAL = {
-    "digit_range": list(range(5, 10)),
+    "digit_range": list(range(0, 10)),
     "num_digits": 2,
     "motion": "horizontal",
     "collision_mode": "bounce",
@@ -119,7 +119,7 @@ OOD_DISAPPEAR_HORIZONTAL = {
 }
 
 OOD_STICK_HORIZONTAL = {
-    "digit_range": list(range(5, 10)),
+    "digit_range": list(range(0, 10)),
     "num_digits": 2,
     "motion": "horizontal",
     "collision_mode": "slide",
@@ -139,7 +139,7 @@ ID_NORMAL = {
 }
 
 ID_NORMAL_VERTICAL = {
-    "digit_range": list(range(0, 5)),
+    "digit_range": list(range(0, 10)),
     "num_digits": 2,
     "motion": "vertical",
     "collision_mode": "bounce",
@@ -148,6 +148,14 @@ ID_NORMAL_VERTICAL = {
 
 OOD_NORMAL = {
     "digit_range": list(range(5, 10)),
+    "num_digits": 2,
+    "motion": "free",
+    "collision_mode": "bounce",
+    "anomaly": None
+}
+
+OOD_NORMAL_VERTICAL = {
+    "digit_range": list(range(0, 10)),
     "num_digits": 2,
     "motion": "vertical",
     "collision_mode": "bounce",

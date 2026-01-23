@@ -72,27 +72,47 @@ def overlap(o1, o2):
 
 
 def handle_object_collision(objects, collision_mode):
-    """Handle collisions between all active objects"""
-    active_objects = [obj for obj in objects if obj.active]
+    """Resolve collisions between all active objects with proper separation"""
     
     if collision_mode == "slide":
         return
-    
-    # Check all pairs of active objects
+
+    active_objects = [obj for obj in objects if obj.active]
+
     for i in range(len(active_objects)):
         for j in range(i + 1, len(active_objects)):
             o1, o2 = active_objects[i], active_objects[j]
-            
-            if overlap(o1, o2):
-                # Bounce: swap velocities
-                o1.vx, o2.vx = o2.vx, o1.vx
-                o1.vy, o2.vy = o2.vy, o1.vy
 
-                # Separate objects to avoid jitter
-                o1.x += o1.vx
-                o1.y += o1.vy
-                o2.x += o2.vx
-                o2.y += o2.vy
+            if not overlap(o1, o2):
+                continue
+
+            # -------------------------------
+            # 1. Compute overlap depth
+            # -------------------------------
+            dx = (o1.x + DIGIT_SIZE / 2) - (o2.x + DIGIT_SIZE / 2)
+            dy = (o1.y + DIGIT_SIZE / 2) - (o2.y + DIGIT_SIZE / 2)
+
+            overlap_x = DIGIT_SIZE - abs(dx)
+            overlap_y = DIGIT_SIZE - abs(dy)
+
+            # -------------------------------
+            # 2. Separate along minimum axis
+            # -------------------------------
+            if overlap_x < overlap_y:
+                shift = overlap_x / 2
+                o1.x += shift * np.sign(dx)
+                o2.x -= shift * np.sign(dx)
+            else:
+                shift = overlap_y / 2
+                o1.y += shift * np.sign(dy)
+                o2.y -= shift * np.sign(dy)
+
+            # -------------------------------
+            # 3. Velocity response (bounce)
+            # -------------------------------
+            o1.vx, o2.vx = o2.vx, o1.vx
+            o1.vy, o2.vy = o2.vy, o1.vy
+
 
 
 
