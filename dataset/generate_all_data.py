@@ -1,9 +1,9 @@
 import os
 import numpy as np
 from generator import generate_sequence
-from visualize import visualize_sequence, save_gif
+from visualize import save_gif
 from config import *
-from load_mnist import load_mnist_by_digit  # you need a function to load digits into dict
+from load_mnist import load_mnist_by_digit
 
 # -------------------------
 # PARAMETERS
@@ -11,7 +11,6 @@ from load_mnist import load_mnist_by_digit  # you need a function to load digits
 IMG_SIZE = 64       # frame size
 DIGIT_SIZE = 14     # size of MNIST digits
 SEQ_LEN = 20        # sequence length
-SEQUENCES_PER_CONFIG = 20  # how many sequences per config (number of test data)
 
 OUTPUT_DIR = "data/custom"
 GIF_DIR = os.path.join(OUTPUT_DIR, "gifs")
@@ -21,7 +20,6 @@ os.makedirs(GIF_DIR, exist_ok=True)
 # -------------------------
 # LOAD CONFIGS
 # -------------------------
-
 ALL_CONFIGS = {
     # =====================
     # TRAINING
@@ -57,25 +55,41 @@ ALL_CONFIGS = {
     "ID_NORMAL": ID_NORMAL,
     "ID_NORMAL_VERTICAL": ID_NORMAL_VERTICAL,
     "OOD_NORMAL": OOD_NORMAL,
+    "OOD_NORMAL_VERTICAL": OOD_NORMAL_VERTICAL
 }
 
-
+# -------------------------
+# SEQUENCE COUNTS
+# -------------------------
+SEQUENCES_COUNTS = {}
+for name in ALL_CONFIGS.keys():
+    if name in ["TRAIN_ID", "TRAIN_ID_VERTICAL"]:
+        SEQUENCES_COUNTS[name] = 10000  # Training
+    else:
+        SEQUENCES_COUNTS[name] = 1000   # Testing / anomalies
 
 # -------------------------
-# GENERATE ALL DATA
+# GENERATE DATA
 # -------------------------
 mnist_by_digit = load_mnist_by_digit()
+
 for name, config in ALL_CONFIGS.items():
-    print(f"Generating sequences for {name} ...")
+    n_sequences = SEQUENCES_COUNTS[name]
+    print(f"Generating {n_sequences} sequences for {name} ...")
+    
     sequences = []
-    for i in range(SEQUENCES_PER_CONFIG):
+    for i in range(n_sequences):
         seq = generate_sequence(mnist_by_digit, config)
         sequences.append(seq)
 
-        # Save a GIF for the first sequence
-        if i == 0:
-            gif_path = os.path.join(GIF_DIR, f"{name}.gif")
+        # Save a GIF for the first 3 sequences
+        if i < 3:
+            gif_path = os.path.join(GIF_DIR, f"{name}_{i+1}.gif")
             save_gif(seq, gif_path)
+
+        # Optional: Print progress every 1000 sequences
+        if (i + 1) % 1000 == 0:
+            print(f"  Generated {i+1}/{n_sequences}")
 
     sequences = np.stack(sequences)
     save_path = os.path.join(OUTPUT_DIR, f"{name}.npz")

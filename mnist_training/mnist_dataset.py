@@ -22,6 +22,8 @@ class MovingMNISTDataset(Dataset):
         else:
             raise ValueError("split must be 'train' or 'val'")
         
+        print(f"{split.upper()} dataset loaded: {len(self.data)} sequences")
+
     def __len__(self):
         return self.data.shape[0]
 
@@ -32,3 +34,9 @@ class MovingMNISTDataset(Dataset):
         seq = np.expand_dims(seq, axis=1)  # (T, 1, H, W)
 
         return torch.from_numpy(seq)
+    # def __getitem__(self, idx):
+    #     seq = self.data[idx]
+    #     seq = seq.astype(np.float32) / 255.0
+    #     seq = 1.0 - seq  # INVERT: black becomes white, white becomes black
+    #     seq = np.expand_dims(seq, axis=1)
+    #     return torch.from_numpy(seq)
