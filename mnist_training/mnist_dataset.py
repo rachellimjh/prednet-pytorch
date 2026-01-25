@@ -2,14 +2,16 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-
+from .mnist_settings import NPZ_FILE
 
 class MovingMNISTDataset(Dataset):
     def __init__(self, data_dir, nt, split="train", train_ratio=0.9):
         self.nt = nt
 
         # ---- Load .npz correctly ----
-        npz_path = os.path.join(data_dir, "TRAIN_ID.npz")
+        # npz_path = os.path.join(data_dir, "TRAIN_ID.npz")
+        npz_path = os.path.join(data_dir, NPZ_FILE)
+        # TRAIN_ID
         data = np.load(npz_path)["sequences"]  # (N, T, H, W)
 
         N = data.shape[0]
@@ -19,6 +21,8 @@ class MovingMNISTDataset(Dataset):
             self.data = data[:split_idx]
         elif split == "val":
             self.data = data[split_idx:]
+        elif split == "all":  # Add this option
+            self.data = data
         else:
             raise ValueError("split must be 'train' or 'val'")
         

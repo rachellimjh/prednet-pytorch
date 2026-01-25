@@ -6,7 +6,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from torch.utils.data import DataLoader
-
 from skimage.metrics import structural_similarity as ssim
 
 from prednet import PredNet
@@ -18,16 +17,16 @@ from mnist_training.mnist_settings import *
 # --------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-weights_file = os.path.join(WEIGHTS_DIR, "prednet_mmnist_finetuned_best.pth")
+weights_file = os.path.join(WEIGHTS_DIR, "prednet_kitti_to_mmnist_best.pth")
 
 nt = 20
-batch_size = 3
+batch_size = 8
 n_plot = 3
 
 # --------------------
-# Model params (MUST match training)
+# Model params (MUST match training - 3 Channel)
 # --------------------
-stack_sizes = (1, 48, 96, 192)
+stack_sizes = (3, 48, 96, 192) # 3 Channels because it was finetuned from KITTI
 R_stack_sizes = stack_sizes
 A_filt_sizes = (3, 3, 3)
 Ahat_filt_sizes = (3, 3, 3, 3)
@@ -45,99 +44,139 @@ model = PredNet(
     output_mode="prediction",
 )
 
-model.load_state_dict(torch.load(weights_file, map_location=device))
+if os.path.exists(weights_file):
+    model.load_state_dict(torch.load(weights_file, map_location=device))
+    print(f"Loaded finetuned weights from {weights_file}")
+else:
+    print(f"ERROR: Weights file not found at {weights_file}")
+    # exit()
+
 model.to(device)
 model.eval()
-
-print("Loaded finetuned KITTI → Moving MNIST model")
 
 # --------------------
 # Dataset
 # --------------------
-dataset = MovingMNISTDataset(
-    data_dir=DATA_DIR,
-    nt=nt,
-    split="val",
-)
-
-loader = DataLoader(
-    dataset,
-    batch_size=batch_size,
-    shuffle=False,
-    drop_last=True,
-)
+# split="all" uses the entire file provided in the dataset class
+dataset = MovingMNISTDataset(data_dir=DATA_DIR, nt=nt, split="all")
+loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
 # --------------------
-# Metrics
+# Anomaly evaluation config
 # --------------------
-all_mse_model = []
-all_mse_prev = []
+EVAL_ANOMALY_ONLY = EVAL_ANOMALY_ONLY # Set True to evaluate from anomaly frame onwards
+ANOMALY_T = nt // 2
+
+# --------------------
+# Metrics Loop
+# --------------------
+# Model Metrics Only
+all_mse = []
 all_snr = []
 all_ssim = []
 
+# Storage for plotting
+plot_inputs = None
+plot_preds = None
+
+print("Starting evaluation loop...")
+
 with torch.no_grad():
-    inputs = next(iter(loader))  # (B, T, 1, H, W)
-    inputs = inputs.to(device)
+    for i, inputs in enumerate(loader):
+        inputs = inputs.to(device)
 
-    predictions = model(inputs)
+        # 1. Normalization (Safety)
+        if inputs.max() > 1.0:
+            inputs = inputs.float() / 255.0
 
-    X = inputs.cpu().numpy()
-    X_hat = predictions.cpu().numpy()
+        # 2. Channel Adaptation (1 -> 3)
+        # Finetuned model expects 3 channels, MNIST gives 1
+        inputs_3ch = inputs.repeat(1, 1, 3, 1, 1)
 
-    for b in range(batch_size):
-        for t in range(1, nt):
-            gt = X[b, t, 0]
-            pred = X_hat[b, t, 0]
-            prev = X[b, t - 1, 0]
+        # Run Model
+        predictions = model(inputs_3ch)
 
-            # ---- MSE ----
-            mse_model = np.mean((gt - pred) ** 2)
-            mse_prev = np.mean((gt - prev) ** 2)
+        # Save first batch for plotting
+        if i == 0:
+            plot_inputs = inputs_3ch.cpu().numpy()
+            plot_preds = predictions.cpu().numpy()
 
-            all_mse_model.append(mse_model)
-            all_mse_prev.append(mse_prev)
+        # Convert to Numpy (We compare on 3 channels, or just channel 0)
+        # For fairness, we extract Channel 0 (Grayscale) for metrics
+        X_true = inputs_3ch.cpu().numpy()
+        X_hat = predictions.cpu().numpy()
 
-            # ---- SNR ----
-            signal_power = np.mean(gt ** 2)
-            noise_power = mse_model + 1e-8
-            snr = 10 * np.log10(signal_power / noise_power)
-            all_snr.append(snr)
+        # Iterate through batch
+        for b in range(X_true.shape[0]):
+            
+            # --- MODIFIED LOGIC: Time Selection ---
+            if EVAL_ANOMALY_ONLY:
+                # Calculate scores for ALL frames from the Anomaly onwards
+                time_indices = range(ANOMALY_T, nt)
+            else:
+                # Calculate scores for all frames (skipping the very first one)
+                time_indices = range(1, nt)
 
-            # ---- SSIM ----
-            ssim_val = ssim(gt, pred, data_range=1.0)
-            all_ssim.append(ssim_val)
+            for t in time_indices:
+                # Extract Grayscale (Channel 0)
+                gt = X_true[b, t, 0]
+                pred = X_hat[b, t, 0]
+
+                # --- 1. MSE ---
+                mse_model = np.mean((gt - pred) ** 2)
+                all_mse.append(mse_model)
+
+                # --- 2. SNR ---
+                p_signal = np.mean(gt ** 2)
+                p_noise_model = mse_model + 1e-12
+                
+                if p_signal == 0: 
+                    snr_model = 0.0
+                else: 
+                    snr_model = 10 * np.log10(p_signal / p_noise_model)
+                
+                all_snr.append(snr_model)
+
+                # --- 3. SSIM ---
+                ssim_model = ssim(gt, pred, data_range=1.0)
+                all_ssim.append(ssim_model)
+        
+        if (i+1) % 10 == 0:
+            print(f"Processed {i+1} batches...")
 
 # --------------------
-# Results
+# Results Aggregation
 # --------------------
-mean_mse_model = np.mean(all_mse_model)
-mean_mse_prev = np.mean(all_mse_prev)
-mean_snr = np.mean(all_snr)
-mean_ssim = np.mean(all_ssim)
+avg_mse = np.mean(all_mse)
+avg_snr = np.mean(all_snr)
+avg_ssim = np.mean(all_ssim)
 
-print("===== Finetuned Moving MNIST Evaluation =====")
-print(f"Model MSE: {mean_mse_model:.6f}")
-print(f"Prev-frame MSE: {mean_mse_prev:.6f}")
-print(f"MSE ratio (model / prev): {mean_mse_model / mean_mse_prev:.3f}")
-print(f"SNR (dB): {mean_snr:.2f}")
-print(f"SSIM: {mean_ssim:.4f}")
+print("\n" + "="*50)
+print(f"FINETUNED MODEL RESULTS ({'Anomaly -> End' if EVAL_ANOMALY_ONLY else 'Full Sequence'})")
+print("="*50)
+print(f"{'Metric':<10} | {'Model Score':<15}")
+print("-" * 50)
+print(f"{'MSE':<10} | {avg_mse:.6f}")
+print(f"{'SNR':<10} | {avg_snr:.4f} dB")
+print(f"{'SSIM':<10} | {avg_ssim:.4f}")
+print("="*50)
 
 # --------------------
-# Save metrics
+# Save Text Results
 # --------------------
 os.makedirs(RESULTS_SAVE_DIR, exist_ok=True)
-
-metrics_file = os.path.join(
-    RESULTS_SAVE_DIR, "finetuned_mnist_eval_metrics.txt"
-)
+metrics_file = os.path.join(RESULTS_SAVE_DIR, "finetuned_mnist_eval_metrics.txt")
 
 with open(metrics_file, "w") as f:
-    f.write("Finetuned KITTI → Moving MNIST Evaluation\n")
-    f.write(f"Model MSE: {mean_mse_model:.6f}\n")
-    f.write(f"Prev-frame MSE: {mean_mse_prev:.6f}\n")
-    f.write(f"MSE ratio: {mean_mse_model / mean_mse_prev:.3f}\n")
-    f.write(f"SNR (dB): {mean_snr:.2f}\n")
-    f.write(f"SSIM: {mean_ssim:.4f}\n")
+    f.write(f"Evaluation Mode: {'Anomaly -> End' if EVAL_ANOMALY_ONLY else 'Full Sequence'}\n")
+    f.write("==================================================\n")
+    f.write(f"{'Metric':<10} | {'Model Score':<15}\n")
+    f.write("--------------------------------------------------\n")
+    f.write(f"{'MSE':<10} | {avg_mse:.6f}\n")
+    f.write(f"{'SNR':<10} | {avg_snr:.4f}\n")
+    f.write(f"{'SSIM':<10} | {avg_ssim:.4f}\n")
+
+print(f"Metrics saved to {metrics_file}")
 
 # --------------------
 # Plot predictions
@@ -145,35 +184,50 @@ with open(metrics_file, "w") as f:
 plot_dir = os.path.join(RESULTS_SAVE_DIR, "finetuned_mnist_prediction_plots")
 os.makedirs(plot_dir, exist_ok=True)
 
-title_str = (
-    f"MSE={mean_mse_model:.4f} | "
-    f"SNR={mean_snr:.2f}dB | "
-    f"SSIM={mean_ssim:.4f}"
-)
+# Use the saved batch
+X_true = plot_inputs
+X_hat = plot_preds
 
-for i in range(n_plot):
+print(f"Plotting {n_plot} sequences...")
+
+for i in range(min(n_plot, X_true.shape[0])):
     fig = plt.figure(figsize=(nt, 4))
-    fig.suptitle(title_str, fontsize=12)
-
     gs = gridspec.GridSpec(2, nt)
     gs.update(wspace=0.05, hspace=0.05)
+    
+    # Calculate specific metrics for this specific sequence (averaged over time)
+    # Note: This is an approximation if batch shuffling was on, but here shuffle=False so it works.
+    idx_start = i * len(time_indices)
+    idx_end = idx_start + len(time_indices)
+    
+    # Check bounds safety
+    if idx_end <= len(all_mse):
+        seq_mse = np.mean(all_mse[idx_start:idx_end])
+        seq_snr = np.mean(all_snr[idx_start:idx_end])
+        seq_ssim = np.mean(all_ssim[idx_start:idx_end])
+    else:
+        seq_mse, seq_snr, seq_ssim = 0, 0, 0
+
+    fig.suptitle(f"KITTI pretrained fintuned on MNIST Model Prediction (Sequence {i})", y=0.95)
 
     for t in range(nt):
-        # Predicted (top)
-        ax = plt.subplot(gs[t])
-        ax.imshow(X_hat[i, t, 0], cmap="gray", vmin=0, vmax=1)
-        ax.axis("off")
+        # --- PREDICTED (Top Row) ---
+        ax_pred = plt.subplot(gs[0, t])
+        ax_pred.imshow(X_hat[i, t, 0], cmap="gray", vmin=0, vmax=1)
+        ax_pred.axis("off")
+        
         if t == 0:
-            ax.set_ylabel("Predicted", fontsize=10)
+            ax_pred.set_title("Predicted", fontsize=10, loc='left')
 
-        # Actual (bottom)
-        ax = plt.subplot(gs[t + nt])
-        ax.imshow(X[i, t, 0], cmap="gray", vmin=0, vmax=1)
-        ax.axis("off")
+        # --- ACTUAL (Bottom Row) ---
+        ax_gt = plt.subplot(gs[1, t])
+        ax_gt.imshow(X_true[i, t, 0], cmap="gray", vmin=0, vmax=1)
+        ax_gt.axis("off")
+        
         if t == 0:
-            ax.set_ylabel("Actual", fontsize=10)
+            ax_gt.set_title("Actual", fontsize=10, loc='left')
 
-    plt.savefig(os.path.join(plot_dir, f"sequence_{i}.png"))
+    plt.savefig(os.path.join(plot_dir, f"sequence_{i}.png"), bbox_inches="tight")
     plt.close()
 
-print("Saved finetuned MNIST prediction plots")
+print(f"Saved finetuned MNIST prediction plots to {plot_dir}")

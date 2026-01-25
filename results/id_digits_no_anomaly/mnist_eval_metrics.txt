@@ -1,6 +1,0 @@
-===== Moving MNIST Evaluation =====
-Model MSE: 0.000949
-Prev-frame MSE: 0.012752
-MSE ratio (model / prev): 0.074
-SNR (dB): 14.51
-SSIM: 0.9849
