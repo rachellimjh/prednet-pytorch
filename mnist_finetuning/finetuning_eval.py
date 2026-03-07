@@ -17,7 +17,7 @@ from mnist_training.mnist_settings import *
 # --------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-weights_file = os.path.join(WEIGHTS_DIR, "prednet_kitti_to_mmnist_best.pth")
+weights_file = os.path.join(WEIGHTS_DIR, MNIST_MODEL)
 
 nt = 20
 batch_size = 8

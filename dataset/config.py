@@ -154,10 +154,10 @@ OOD_NORMAL = {
     "anomaly": None
 }
 
-OOD_NORMAL_VERTICAL = {
+OOD_NORMAL_HORIZONTAL = {
     "digit_range": list(range(0, 10)),
     "num_digits": 2,
-    "motion": "vertical",
+    "motion": "horizontal",
     "collision_mode": "bounce",
     "anomaly": None
 }
