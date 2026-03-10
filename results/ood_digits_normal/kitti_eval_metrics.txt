@@ -1,0 +1,5 @@
+Evaluated on 1000 sequences
+Metrics calculated on frames: Full Sequence
+MSE:  0.008202
+SNR:  0.4188
+SSIM: 0.1188

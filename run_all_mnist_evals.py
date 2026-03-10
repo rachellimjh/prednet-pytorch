@@ -107,10 +107,10 @@ CONDITIONS = [
         "eval_anomaly_only": False,
     },
     {
-        "name": "OOD vertical no anomaly",
+        "name": "OOD horizontal no anomaly",
         "type": "vertical",
-        "npz_file": "OOD_NORMAL_VERTICAL.npz",
-        "results_dir": "ood_vertical_normal",
+        "npz_file": "OOD_NORMAL_HORIZONTAL.npz",
+        "results_dir": "ood_horizontal_normal",
         "eval_anomaly_only": False,
     },
     {

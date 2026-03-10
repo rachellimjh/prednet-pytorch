@@ -1,0 +1,22 @@
+{
+  "anomaly_only": false,
+  "arch": "mnist_1ch",
+  "horizons": [
+    0,
+    10,
+    19
+  ],
+  "max_batches": 1,
+  "metric_scope": "extrap_only",
+  "repeat_channels": 1,
+  "run": {
+    "batch_size": 8,
+    "data_dir": "data/custom",
+    "dataset": "ID_NORMAL",
+    "device": "cpu",
+    "nt": 20,
+    "run_name": "teacher_forcing_horizon_sweep",
+    "weights_path": "models/mnist_id_vertical\\prednet_mmnist_best.pth"
+  },
+  "save_per_t": true
+}

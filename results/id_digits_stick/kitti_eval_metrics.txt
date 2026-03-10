@@ -1,0 +1,5 @@
+Evaluated on 1000 sequences
+Metrics calculated on frames: Anomaly -> End
+MSE:  0.006408
+SNR:  1.7218
+SSIM: 0.1246
