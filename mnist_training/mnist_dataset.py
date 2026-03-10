@@ -2,16 +2,15 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from .mnist_settings import NPZ_FILE
+from . import mnist_settings
+
 
 class MovingMNISTDataset(Dataset):
     def __init__(self, data_dir, nt, split="train", train_ratio=0.9):
         self.nt = nt
 
         # ---- Load .npz correctly ----
-        # npz_path = os.path.join(data_dir, "TRAIN_ID.npz")
-        npz_path = os.path.join(data_dir, NPZ_FILE)
-        # TRAIN_ID
+        npz_path = os.path.join(data_dir, mnist_settings.NPZ_FILE)
         data = np.load(npz_path)["sequences"]  # (N, T, H, W)
 
         N = data.shape[0]

@@ -151,30 +151,31 @@ avg_mse = np.mean(all_mse)
 avg_snr = np.mean(all_snr)
 avg_ssim = np.mean(all_ssim)
 
-print("\n" + "="*50)
-print(f"FINETUNED MODEL RESULTS ({'Anomaly -> End' if EVAL_ANOMALY_ONLY else 'Full Sequence'})")
-print("="*50)
-print(f"{'Metric':<10} | {'Model Score':<15}")
+mode_str = "Anomaly -> End" if EVAL_ANOMALY_ONLY else "Full Sequence"
+
+print("\n" + "=" * 50)
+print(f"FINAL RESULTS ({mode_str})")
+print("=" * 50)
+print("Model: KITTI + finetuned + Moving MNIST")
+print(f"  MSE:  {avg_mse:.6f}")
+print(f"  SNR:  {avg_snr:.4f}")
+print(f"  SSIM: {avg_ssim:.4f}")
 print("-" * 50)
-print(f"{'MSE':<10} | {avg_mse:.6f}")
-print(f"{'SNR':<10} | {avg_snr:.4f} dB")
-print(f"{'SSIM':<10} | {avg_ssim:.4f}")
-print("="*50)
 
 # --------------------
-# Save Text Results
+# Save Text Results (unified format)
 # --------------------
 os.makedirs(RESULTS_SAVE_DIR, exist_ok=True)
 metrics_file = os.path.join(RESULTS_SAVE_DIR, "finetuned_mnist_eval_metrics.txt")
 
 with open(metrics_file, "w") as f:
-    f.write(f"Evaluation Mode: {'Anomaly -> End' if EVAL_ANOMALY_ONLY else 'Full Sequence'}\n")
-    f.write("==================================================\n")
-    f.write(f"{'Metric':<10} | {'Model Score':<15}\n")
-    f.write("--------------------------------------------------\n")
-    f.write(f"{'MSE':<10} | {avg_mse:.6f}\n")
-    f.write(f"{'SNR':<10} | {avg_snr:.4f}\n")
-    f.write(f"{'SSIM':<10} | {avg_ssim:.4f}\n")
+    f.write(f"Evaluation Mode: {mode_str}\n")
+    f.write("=" * 50 + "\n")
+    f.write("Model: KITTI + finetuned + Moving MNIST\n")
+    f.write(f"MSE: {avg_mse:.4f}\n")
+    f.write(f"SNR: {avg_snr:.4f}\n")
+    f.write(f"SSIM: {avg_ssim:.4f}\n")
+    f.write("-" * 50 + "\n")
 
 print(f"Metrics saved to {metrics_file}")
 

@@ -172,30 +172,42 @@ avg_mse_prev = np.mean(all_mse_prev)
 avg_snr_prev = np.mean(all_snr_prev)
 avg_ssim_prev = np.mean(all_ssim_prev)
 
-print("\n" + "="*50)
-print(f"FINAL RESULTS ({'Anomaly -> End' if EVAL_ANOMALY_ONLY else 'Full Sequence'})")
-print("="*50)
-print(f"{'Metric':<10} | {'Model':<15} | {'Prev Frame (Base)':<20}")
-print("-" * 50)
-print(f"{'MSE':<10} | {avg_mse:.6f}        | {avg_mse_prev:.6f}")
-print(f"{'SNR':<10} | {avg_snr:.4f} dB      | {avg_snr_prev:.4f} dB")
-print(f"{'SSIM':<10} | {avg_ssim:.4f}        | {avg_ssim_prev:.4f}")
-print("="*50)
+mode_str = "Anomaly -> End" if EVAL_ANOMALY_ONLY else "Full Sequence"
+
+print("\n" + "=" * 50)
+print(f"FINAL RESULTS ({mode_str})")
+print("=" * 50)
+
+
+def _print_model_block(name, mse, snr, ssim):
+    print(f"Model: {name}")
+    print(f"  MSE:  {mse:.6f}")
+    print(f"  SNR:  {snr:.4f}")
+    print(f"  SSIM: {ssim:.4f}")
+    print("-" * 50)
+
+
+_print_model_block("Moving MNIST", avg_mse, avg_snr, avg_ssim)
+_print_model_block("Copy previous frame", avg_mse_prev, avg_snr_prev, avg_ssim_prev)
 
 # --------------------
-# Save Text Results
+# Save Text Results (unified format)
 # --------------------
 os.makedirs(RESULTS_SAVE_DIR, exist_ok=True)
 results_txt = os.path.join(RESULTS_SAVE_DIR, "mnist_eval_metrics.txt")
 
 with open(results_txt, "w") as f:
-    f.write(f"Evaluation Mode: {'Anomaly -> End' if EVAL_ANOMALY_ONLY else 'Full Sequence'}\n")
-    f.write("==================================================\n")
-    f.write(f"{'Metric':<10} | {'Model':<15} | {'Prev Frame':<20}\n")
-    f.write("--------------------------------------------------\n")
-    f.write(f"{'MSE':<10} | {avg_mse:.6f}        | {avg_mse_prev:.6f}\n")
-    f.write(f"{'SNR':<10} | {avg_snr:.4f}        | {avg_snr_prev:.4f}\n")
-    f.write(f"{'SSIM':<10} | {avg_ssim:.4f}        | {avg_ssim_prev:.4f}\n")
+    f.write(f"Evaluation Mode: {mode_str}\n")
+    f.write("=" * 50 + "\n")
+    for name, mse, snr, ssim in [
+        ("Moving MNIST", avg_mse, avg_snr, avg_ssim),
+        ("Copy previous frame", avg_mse_prev, avg_snr_prev, avg_ssim_prev),
+    ]:
+        f.write(f"Model: {name}\n")
+        f.write(f"MSE: {mse:.4f}\n")
+        f.write(f"SNR: {snr:.4f}\n")
+        f.write(f"SSIM: {ssim:.4f}\n")
+        f.write("-" * 50 + "\n")
 
 print(f"Metrics saved to {results_txt}")
 

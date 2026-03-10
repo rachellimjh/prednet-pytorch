@@ -152,23 +152,28 @@ avg_mse = np.mean(all_mse)
 avg_snr = np.mean(all_snr)
 avg_ssim = np.mean(all_ssim)
 
-print("\n" + "="*40)
-print(f"FINAL RESULTS ({'Anomaly Frames (T -> End)' if EVAL_ANOMALY_ONLY else 'Full Sequence'})")
-print("="*40)
-print(f"MSE:  {avg_mse:.6f}  (Lower is better)")
-print(f"SNR:  {avg_snr:.4f}  (Higher is better)")
-print(f"SSIM: {avg_ssim:.4f}  (Higher is better)")
-print("="*40)
+mode_str = "Anomaly -> End" if EVAL_ANOMALY_ONLY else "Full Sequence"
 
-# Save Text Results
+print("\n" + "=" * 50)
+print(f"FINAL RESULTS ({mode_str})")
+print("=" * 50)
+print("Model: KITTI")
+print(f"  MSE:  {avg_mse:.4f}")
+print(f"  SNR:  {avg_snr:.4f}")
+print(f"  SSIM: {avg_ssim:.4f}")
+print("-" * 50)
+
+# Save Text Results (unified format)
 os.makedirs(RESULTS_SAVE_DIR, exist_ok=True)
 txt_path = os.path.join(RESULTS_SAVE_DIR, 'kitti_eval_metrics.txt')
 with open(txt_path, 'w') as f:
-    f.write(f"Evaluated on {len(test_loader.dataset)} sequences\n")
-    f.write(f"Metrics calculated on frames: {'Anomaly -> End' if EVAL_ANOMALY_ONLY else 'Full Sequence'}\n")
-    f.write(f"MSE:  {avg_mse:.6f}\n")
-    f.write(f"SNR:  {avg_snr:.4f}\n")
+    f.write(f"Evaluation Mode: {mode_str}\n")
+    f.write("=" * 50 + "\n")
+    f.write("Model: KITTI\n")
+    f.write(f"MSE: {avg_mse:.6f}\n")
+    f.write(f"SNR: {avg_snr:.4f}\n")
     f.write(f"SSIM: {avg_ssim:.4f}\n")
+    f.write("-" * 50 + "\n")
 print(f"Metrics saved to {txt_path}")
 
 # --------------------

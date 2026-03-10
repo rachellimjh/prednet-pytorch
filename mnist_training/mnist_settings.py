@@ -10,4 +10,4 @@ MNIST_MODEL="prednet_mmnist_best.pth"
 # MNIST_MODEL="prednet_kitti_to_mmnist_best.pth"
 
 RESULTS_SAVE_DIR="results/ood_horizontal_normal"
-EVAL_ANOMALY_ONLY = False # True for anomaly datasets j
+EVAL_ANOMALY_ONLY = False # True for anomaly datasets
