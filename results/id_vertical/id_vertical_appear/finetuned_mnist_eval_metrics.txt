@@ -1,7 +1,7 @@
 Evaluation Mode: Anomaly -> End
 ==================================================
 Model: KITTI + finetuned + Moving MNIST
-MSE: 0.0006
-SNR: 13.7057
-SSIM: 0.9907
+MSE: 0.0031
+SNR: 8.1409
+SSIM: 0.9560
 --------------------------------------------------

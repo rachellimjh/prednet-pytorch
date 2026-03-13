@@ -10,7 +10,7 @@ from skimage.metrics import structural_similarity as ssim
 
 from prednet import PredNet
 from mnist_training.mnist_dataset import MovingMNISTDataset
-from mnist_training.mnist_settings import *
+from mnist_training import mnist_settings
 
 # --------------------
 # Setup
@@ -18,7 +18,7 @@ from mnist_training.mnist_settings import *
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Ensure this points to the correct 1-channel model weights
-weights_file = os.path.join(WEIGHTS_DIR, MNIST_MODEL)
+weights_file = os.path.join(mnist_settings.WEIGHTS_DIR, mnist_settings.MNIST_MODEL)
 
 nt = 20
 batch_size = 8
@@ -59,13 +59,13 @@ model.eval()
 # Dataset
 # --------------------
 # split="all" uses the entire file provided in the dataset class
-dataset = MovingMNISTDataset(data_dir=DATA_DIR, nt=nt, split="all")
+dataset = MovingMNISTDataset(npz_file=os.path.join(mnist_settings.DATA_DIR, mnist_settings.NPZ_FILE), nt=nt, split="all")
 loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
 # --------------------
 # Anomaly evaluation config
 # --------------------
-EVAL_ANOMALY_ONLY = EVAL_ANOMALY_ONLY  # Set to True to evaluate from anomaly frame onwards
+EVAL_ANOMALY_ONLY = mnist_settings.EVAL_ANOMALY_ONLY  # Set to True to evaluate from anomaly frame onwards
 ANOMALY_T = nt // 2
 
 # --------------------
@@ -193,8 +193,8 @@ _print_model_block("Copy previous frame", avg_mse_prev, avg_snr_prev, avg_ssim_p
 # --------------------
 # Save Text Results (unified format)
 # --------------------
-os.makedirs(RESULTS_SAVE_DIR, exist_ok=True)
-results_txt = os.path.join(RESULTS_SAVE_DIR, "mnist_eval_metrics.txt")
+os.makedirs(mnist_settings.RESULTS_SAVE_DIR, exist_ok=True)
+results_txt = os.path.join(mnist_settings.RESULTS_SAVE_DIR, "mnist_eval_metrics.txt")
 
 with open(results_txt, "w") as f:
     f.write(f"Evaluation Mode: {mode_str}\n")
@@ -214,7 +214,7 @@ print(f"Metrics saved to {results_txt}")
 # --------------------
 # Plotting
 # --------------------
-save_dir = os.path.join(RESULTS_SAVE_DIR, "mnist_prediction_plots")
+save_dir = os.path.join(mnist_settings.RESULTS_SAVE_DIR, "mnist_prediction_plots")
 os.makedirs(save_dir, exist_ok=True)
 
 # Use the saved batch

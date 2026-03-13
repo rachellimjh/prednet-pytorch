@@ -10,21 +10,21 @@ from skimage.metrics import structural_similarity as ssim
 
 from prednet import PredNet
 from mnist_training.mnist_dataset import MovingMNISTDataset
-from mnist_training.mnist_settings import *
+from mnist_training import mnist_settings 
 
 # --------------------
 # Configuration
 # --------------------
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-weights_file = os.path.join(KITTI_WEIGHTS, 'prednet_kitti_best.pth')
+weights_file = os.path.join(mnist_settings.KITTI_WEIGHTS, 'prednet_kitti_best.pth')
 
 nt = 20
 batch_size = 8
 n_plot = 3  # How many sequence images to save
 
 # Evaluation Mode
-EVAL_ANOMALY_ONLY = EVAL_ANOMALY_ONLY # Set True to only calculate metrics AFTER the anomaly starts
+EVAL_ANOMALY_ONLY = mnist_settings.EVAL_ANOMALY_ONLY # Set True to only calculate metrics AFTER the anomaly starts
 ANOMALY_T = nt // 2
 
 # --------------------
@@ -62,7 +62,7 @@ model.eval()
 # Data Loader
 # --------------------
 test_dataset = MovingMNISTDataset(
-    data_dir=DATA_DIR, 
+    npz_file=os.path.join(mnist_settings.DATA_DIR, mnist_settings.NPZ_FILE), 
     nt=nt, 
     split="all"  # all
 )
@@ -164,8 +164,8 @@ print(f"  SSIM: {avg_ssim:.4f}")
 print("-" * 50)
 
 # Save Text Results (unified format)
-os.makedirs(RESULTS_SAVE_DIR, exist_ok=True)
-txt_path = os.path.join(RESULTS_SAVE_DIR, 'kitti_eval_metrics.txt')
+os.makedirs(mnist_settings.RESULTS_SAVE_DIR, exist_ok=True)
+txt_path = os.path.join(mnist_settings.RESULTS_SAVE_DIR, 'kitti_eval_metrics.txt')
 with open(txt_path, 'w') as f:
     f.write(f"Evaluation Mode: {mode_str}\n")
     f.write("=" * 50 + "\n")
@@ -180,7 +180,7 @@ print(f"Metrics saved to {txt_path}")
 # Plotting
 # --------------------
 print(f"Plotting {n_plot} sequences...")
-plot_save_dir = os.path.join(RESULTS_SAVE_DIR, 'kitti_prediction_plots')
+plot_save_dir = os.path.join(mnist_settings.RESULTS_SAVE_DIR, 'kitti_prediction_plots')
 os.makedirs(plot_save_dir, exist_ok=True)
 
 # Use the stored batch

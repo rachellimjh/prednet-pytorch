@@ -6,12 +6,11 @@ from . import mnist_settings
 
 
 class MovingMNISTDataset(Dataset):
-    def __init__(self, data_dir, nt, split="train", train_ratio=0.9):
+    def __init__(self, npz_file, nt, split="train", train_ratio=0.9):
         self.nt = nt
 
         # ---- Load .npz correctly ----
-        npz_path = os.path.join(data_dir, mnist_settings.NPZ_FILE)
-        data = np.load(npz_path)["sequences"]  # (N, T, H, W)
+        data = np.load(npz_file)["sequences"]  # (N, T, H, W)
 
         N = data.shape[0]
         split_idx = int(train_ratio * N)
