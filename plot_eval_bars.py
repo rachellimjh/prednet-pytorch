@@ -14,23 +14,23 @@ CONDITION_LABEL_MAP = {
     "id_digits_normal": "Seen digits",
     "ood_digits_normal": "Unseen digits",
     "id_vertical_normal": "Seen motion",
-    "ood_vertical_normal": "Unseen motion",
+    "ood_horizontal_normal": "Unseen motion",
 
-    "id_digits_appearance": "Seen digits (appearance anomaly)",
-    "id_digits_disappearance": "Seen digits (disappearance anomaly)",
-    "id_digits_collision": "Seen digits (collision anomaly)",
+    "id_digits_appear": "Seen digits (appearance anomaly)",
+    "id_digits_disappear": "Seen digits (disappearance anomaly)",
+    "id_digits_stick": "Seen digits (collision anomaly)",
 
-    "ood_digits_appearance": "Unseen digits (appearance anomaly)",
-    "ood_digits_disappearance": "Unseen digits (disappearance anomaly)",
-    "ood_digits_collision": "Unseen digits (collision anomaly)",
+    "ood_digits_appear": "Unseen digits (appearance anomaly)",
+    "ood_digits_disappear": "Unseen digits (disappearance anomaly)",
+    "ood_digits_stick": "Unseen digits (collision anomaly)",
 
-    "id_vertical_appearance": "Seen motion (appearance anomaly)",
-    "id_vertical_disappearance": "Seen motion (disappearance anomaly)",
-    "id_vertical_collision": "Seen motion (collision anomaly)",
+    "id_vertical_appear": "Seen motion (appearance anomaly)",
+    "id_vertical_disappear": "Seen motion (disappearance anomaly)",
+    "id_vertical_stick": "Seen motion (collision anomaly)",
 
-    "ood_vertical_appearance": "Unseen motion (appearance anomaly)",
-    "ood_vertical_disappearance": "Unseen motion (disappearance anomaly)",
-    "ood_vertical_collision": "Unseen motion (collision anomaly)",
+    "ood_horizontal_appear": "Unseen motion (appearance anomaly)",
+    "ood_horizontal_disappear": "Unseen motion (disappearance anomaly)",
+    "ood_horizontal_stick": "Unseen motion (collision anomaly)",
 }
 
 # Conditions are discovered dynamically from RESULTS_ROOT; this mapping is kept
@@ -185,76 +185,152 @@ def collect_all_metrics() -> Dict[str, Dict[str, Dict[str, Dict[str, float]]]]:
     return all_metrics
 
 
-def plot_bar_charts(all_metrics: Dict[str, Dict[str, Dict[str, Dict[str, float]]]]) -> None:
+def _group_condition(label: str):
+    """Map raw condition folder name -> (base_group, anomaly_type)."""
+
+    if "id_digits" in label:
+        base = "Seen digits"
+    elif "ood_digits" in label:
+        base = "Unseen digits"
+    elif "id_vertical" in label:
+        base = "Seen motion"
+    elif "ood_horizontal" in label:
+        base = "Unseen motion"
+    else:
+        base = label
+
+    # check longer strings first
+    if "disappear" in label:
+        anomaly = "Disappearance"
+    elif "appear" in label:
+        anomaly = "Appearance"
+    elif "stick" in label:
+        anomaly = "Collision"
+    else:
+        anomaly = "Normal"
+
+    return base, anomaly
+
+
+def plot_bar_charts(all_metrics):
     """
-    Create one bar chart per metric with:
-      - X-axis: 4 conditions (ID/OOD x anomaly/no anomaly)
-      - Bars within each group: 4 models
+    Improved bar charts:
+    - groups conditions logically
+    - prevents number overlap
+    - cleaner x-axis labels
     """
+
     models = list(MODEL_SPECS.keys())
     num_models = len(models)
 
-    for variant, cond_metrics in sorted(all_metrics.items()):
-        conditions = list(cond_metrics.keys())
-        num_conditions = len(conditions)
+    base_order = ["Seen digits", "Unseen digits", "Seen motion", "Unseen motion"]
+    
+    anomaly_order = ["Normal", "Appearance", "Disappearance", "Collision"]
 
-        if num_conditions == 0:
-            continue
+    for variant, cond_metrics in sorted(all_metrics.items()):
+
+        # group conditions
+        from collections import defaultdict
+        grouped = defaultdict(dict)
+
+        for cond_label, data in cond_metrics.items():
+            base, anomaly = _group_condition(cond_label)
+            print(f"variant={variant}, cond_label={cond_label}, base={base}, anomaly={anomaly}")
+            grouped[base][anomaly] = data
 
         output_dir = os.path.join(RESULTS_ROOT, variant, "summary_bar_plots")
         os.makedirs(output_dir, exist_ok=True)
 
-        x = list(range(num_conditions))
         bar_width = 0.18
-        total_width = bar_width * num_models
-        offsets = [i * bar_width - total_width / 2 + bar_width / 2 for i in range(num_models)]
 
         for metric in METRICS:
-            plt.figure(figsize=(10, 6))
+
+            plt.figure(figsize=(17, 10))
+
+            x_positions = []
+            labels = []
+            cond_lookup = []
+
+            xpos = 0
+
+            for base in base_order:
+                if base not in grouped:
+                    continue
+
+                for anomaly in anomaly_order:
+                    if anomaly not in grouped[base]:
+                        continue
+
+                    x_positions.append(xpos)
+                    labels.append(f"{base}\n{anomaly}")
+                    cond_lookup.append(grouped[base][anomaly])
+                    xpos += 0.8
+
+                xpos += 0.6  # gap between groups
+
+            total_width = bar_width * num_models
+            offsets = [
+                i * bar_width - total_width / 2 + bar_width / 2
+                for i in range(num_models)
+            ]
+
+            # collect all metric values (for y scaling)
+            all_vals = []
+            for cond in cond_lookup:
+                for model in models:
+                    if metric in cond[model]:
+                        all_vals.append(cond[model][metric])
+
+            y_min = min(all_vals)
+            y_max = max(all_vals)
+            margin = (y_max - y_min) * 0.05
+            lower = y_min - margin
+            upper = y_max + margin
+            plt.ylim(lower, upper)
 
             for model_idx, model_name in enumerate(models):
-                y_vals: List[float] = []
-                for cond_label in conditions:
-                    try:
-                        value = cond_metrics[cond_label][model_name][metric]
-                    except KeyError:
-                        value = float("nan")
-                    y_vals.append(value)
 
-                bar_positions = [xi + offsets[model_idx] for xi in x]
-              
-                bars = plt.bar(bar_positions, y_vals, width=bar_width, label=model_name)
-                for xpos, val in zip(bar_positions, y_vals):
+                y_vals = []
+                for cond in cond_lookup:
+                    y_vals.append(cond[model_name].get(metric, float("nan")))
+
+                bar_positions = [
+                    xi + offsets[model_idx] for xi in x_positions
+                ]
+
+                bars = plt.bar(
+                    bar_positions,
+                    y_vals,
+                    width=bar_width,
+                    label=model_name,
+                )
+
+                # value labels (fixed overlap)
+                for xpos_bar, val in zip(bar_positions, y_vals):
                     if not (val != val):  # skip NaN
-                        plt.text(xpos, val, f"{val:.4f}", ha="center", va="bottom", fontsize=8)
-            ##
-            all_vals = []
-            for cond_label in conditions:
-                for model_name in models:
-                    try:
-                        all_vals.append(cond_metrics[cond_label][model_name][metric])
-                    except KeyError:
-                        pass
+                        plt.text(
+                            xpos_bar,
+                            val + margin * 0.05,
+                            str(val),
+                            ha="center",
+                            va="bottom",
+                            fontsize=7,
+                            rotation=90,
+                        )
 
-            if all_vals:
-                y_min = min(all_vals)
-                y_max = max(all_vals)
-                margin = (y_max - y_min) * 0.2 if y_max != y_min else 0.01
-                plt.ylim(y_min - margin, y_max + margin)
-            ##
-            labels = [CONDITION_LABEL_MAP.get(c, c) for c in conditions]
-            plt.xticks(x, labels, rotation=25)
-            plt.ylabel(metric)
-            plt.title(f"{metric} across conditions and models ({variant})")
+            plt.xticks(x_positions, labels, rotation=0)
+            plt.title(f"{metric}")
             plt.legend()
+
             plt.tight_layout()
 
-            out_path = os.path.join(output_dir, f"{metric.lower()}_bar_plot.png")
+            out_path = os.path.join(
+                output_dir, f"{metric.lower()}_bar_plot.png"
+            )
             plt.savefig(out_path)
             plt.close()
 
             print(f"Saved {metric} bar plot to {out_path}")
-
 
 def main() -> None:
     all_metrics = collect_all_metrics()
