@@ -5,6 +5,17 @@ from mnist_training import mnist_settings
 
 
 # ---------------------------------------------------------------------------
+# Teacher forcing horizon (k): list of k values to evaluate.
+# For each k, first k frames use ground truth; after that the model uses
+# its own predictions. Metrics are computed over frames after the window.
+# Change this list to vary which k are run (e.g. [0, 1, 3, 5, 10] or [0, 2, 5]).
+# ---------------------------------------------------------------------------
+TEACHER_FORCING_HORIZONS = [1, 3, 5, 10, 15]
+
+# Set to False to skip the teacher forcing sweep in run_for_condition.
+RUN_TEACHER_FORCING_SWEEP = True
+
+# ---------------------------------------------------------------------------
 # Model variants. Each variant has its own weights_dir for Moving MNIST and
 # KITTI finetuned. Edit these to match your setup.
 # No need to edit mnist_settings.py or kitti_settings.py when using this script.
@@ -191,6 +202,11 @@ def run_for_condition(variant: dict, cond: dict) -> None:
     mnist_settings.MNIST_MODEL = cfg["model_file"]
     import mnist_training.mnist_eval as mnist_eval
     importlib.reload(mnist_eval)
+
+    # 1b. Teacher forcing horizon sweep: loop over k, store results, plot
+    if RUN_TEACHER_FORCING_SWEEP:
+        from mnist_training.teacher_forcing_horizon import run_teacher_forcing_sweep
+        run_teacher_forcing_sweep(horizons=TEACHER_FORCING_HORIZONS)
 
     # 2. KITTI model finetuned on Moving MNIST
     cfg = variant["kitti_finetuned"]
