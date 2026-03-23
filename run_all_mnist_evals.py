@@ -1,7 +1,11 @@
-import importlib
 import os
 
+import numpy as np
+
 from mnist_training import mnist_settings
+from mnist_training.mnist_eval import run_eval as mnist_run_eval
+from mnist_finetuning.finetuning_eval import run_eval as finetuned_run_eval
+from kitti_pretraining.kitti_eval_mnist import run_eval as kitti_run_eval
 
 
 # ---------------------------------------------------------------------------
@@ -169,10 +173,51 @@ CONDITIONS = [
 ]
 
 
+def _write_combined_metrics(results_dir: str, mode_str: str, model_results: list) -> None:
+    """
+    Write a single txt file containing metrics for all 4 baseline models
+    plus standard deviation across them for each metric.
+
+    model_results: list of (name, mse, snr, ssim, std_mse, std_snr, std_ssim) in order:
+        1. Copy previous frame
+        2. KITTI trained
+        3. KITTI trained + finetuned on MNIST
+        4. Trained on MNIST
+    """
+    mse_vals  = [r[1] for r in model_results]
+    snr_vals  = [r[2] for r in model_results]
+    ssim_vals = [r[3] for r in model_results]
+
+    across_std_mse  = float(np.std(mse_vals))
+    across_std_snr  = float(np.std(snr_vals))
+    across_std_ssim = float(np.std(ssim_vals))
+
+    out_path = os.path.join(results_dir, "all_baselines_metrics.txt")
+    with open(out_path, "w") as f:
+        f.write(f"Evaluation Mode: {mode_str}\n")
+        f.write("=" * 50 + "\n")
+        for name, mse, snr, ssim_val, s_mse, s_snr, s_ssim in model_results:
+            f.write(f"Model: {name}\n")
+            f.write(f"MSE: {mse:.4f}\n")
+            f.write(f"MSE_STD: {s_mse:.4f}\n")
+            f.write(f"SNR: {snr:.4f}\n")
+            f.write(f"SNR_STD: {s_snr:.4f}\n")
+            f.write(f"SSIM: {ssim_val:.4f}\n")
+            f.write(f"SSIM_STD: {s_ssim:.4f}\n")
+            f.write("-" * 50 + "\n")
+        f.write("Standard Deviation across all 4 models:\n")
+        f.write(f"MSE std:  {across_std_mse:.4f}\n")
+        f.write(f"SNR std:  {across_std_snr:.4f}\n")
+        f.write(f"SSIM std: {across_std_ssim:.4f}\n")
+        f.write("=" * 50 + "\n")
+
+    print(f"Combined baseline metrics saved to {out_path}")
+
+
 def run_for_condition(variant: dict, cond: dict) -> None:
     """
     Run all MNIST-based evaluations (Moving MNIST, KITTI finetuned, KITTI raw)
-    for a single variant + dataset condition.
+    for a single variant + dataset condition, then write a combined summary.
     """
     variant_name = variant["name"]
     cond_name = cond["name"]
@@ -196,12 +241,15 @@ def run_for_condition(variant: dict, cond: dict) -> None:
 
     os.makedirs(results_dir, exist_ok=True)
 
+    mode_str = "Anomaly -> End" if eval_anomaly_only else "Full Sequence"
+
     # 1. Moving MNIST model (trained only on MNIST)
     cfg = variant["moving_mnist"]
     mnist_settings.WEIGHTS_DIR = cfg["weights_dir"]
     mnist_settings.MNIST_MODEL = cfg["model_file"]
-    import mnist_training.mnist_eval as mnist_eval
-    importlib.reload(mnist_eval)
+    mnist_results = mnist_run_eval()
+    mse_mnist, snr_mnist, ssim_mnist, std_mse_mnist, std_snr_mnist, std_ssim_mnist = mnist_results["mnist"]
+    mse_prev, snr_prev, ssim_prev, std_mse_prev, std_snr_prev, std_ssim_prev = mnist_results["prev_frame"]
 
     # 1b. Teacher forcing horizon sweep: loop over k, store results, plot
     if RUN_TEACHER_FORCING_SWEEP:
@@ -212,14 +260,22 @@ def run_for_condition(variant: dict, cond: dict) -> None:
     cfg = variant["kitti_finetuned"]
     mnist_settings.WEIGHTS_DIR = cfg["weights_dir"]
     mnist_settings.MNIST_MODEL = cfg["model_file"]
-    import mnist_finetuning.finetuning_eval as finetuning_eval
-    importlib.reload(finetuning_eval)
+    mse_finetuned, snr_finetuned, ssim_finetuned, std_mse_finetuned, std_snr_finetuned, std_ssim_finetuned = finetuned_run_eval()
 
     # 3. Raw KITTI model (no finetuning)
     cfg = variant["kitti"]
     mnist_settings.KITTI_WEIGHTS = cfg["kitti_weights_dir"]
-    import kitti_pretraining.kitti_eval_mnist as kitti_eval_mnist
-    importlib.reload(kitti_eval_mnist)
+    mse_kitti, snr_kitti, ssim_kitti, std_mse_kitti, std_snr_kitti, std_ssim_kitti = kitti_run_eval()
+
+    # Collect all 4 baseline results and write combined summary.
+    # Order: copy previous frame, KITTI trained, KITTI finetuned, trained on MNIST
+    model_results = [
+        ("Copy previous frame",                mse_prev,      snr_prev,      ssim_prev,      std_mse_prev,      std_snr_prev,      std_ssim_prev),
+        ("KITTI trained",                      mse_kitti,     snr_kitti,     ssim_kitti,     std_mse_kitti,     std_snr_kitti,     std_ssim_kitti),
+        ("KITTI trained + finetuned on MNIST", mse_finetuned, snr_finetuned, ssim_finetuned, std_mse_finetuned, std_snr_finetuned, std_ssim_finetuned),
+        ("Trained on MNIST",                   mse_mnist,     snr_mnist,     ssim_mnist,     std_mse_mnist,     std_snr_mnist,     std_ssim_mnist),
+    ]
+    _write_combined_metrics(results_dir, mode_str, model_results)
 
 
 def main() -> None:
@@ -234,4 +290,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

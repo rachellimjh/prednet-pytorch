@@ -2,11 +2,17 @@ Evaluation Mode: Full Sequence
 ==================================================
 Model: Moving MNIST
 MSE: 0.0106
+MSE_STD: 0.0029
 SNR: -0.6390
+SNR_STD: 0.7608
 SSIM: 0.8622
+SSIM_STD: 0.0195
 --------------------------------------------------
 Model: Copy previous frame
 MSE: 0.0110
+MSE_STD: 0.0024
 SNR: -0.7039
+SNR_STD: 4.3244
 SSIM: 0.8874
+SSIM_STD: 0.0137
 --------------------------------------------------

@@ -1,0 +1,39 @@
+Evaluation Mode: Full Sequence
+==================================================
+Model: Copy previous frame
+MSE: 0.0110
+MSE_STD: 0.0024
+SNR: -0.7039
+SNR_STD: 4.3244
+SSIM: 0.8874
+SSIM_STD: 0.0137
+--------------------------------------------------
+Model: KITTI trained
+MSE: 0.0063
+MSE_STD: 0.0023
+SNR: 1.7058
+SNR_STD: 1.7202
+SSIM: 0.1461
+SSIM_STD: 0.0473
+--------------------------------------------------
+Model: KITTI trained + finetuned on MNIST
+MSE: 0.0072
+MSE_STD: 0.0022
+SNR: 1.0549
+SNR_STD: 1.0765
+SSIM: 0.8902
+SSIM_STD: 0.0192
+--------------------------------------------------
+Model: Trained on MNIST
+MSE: 0.0106
+MSE_STD: 0.0029
+SNR: -0.6390
+SNR_STD: 0.7608
+SSIM: 0.8622
+SSIM_STD: 0.0195
+--------------------------------------------------
+Standard Deviation across all 4 models:
+MSE std:  0.0020
+SNR std:  1.0517
+SSIM std: 0.3179
+==================================================

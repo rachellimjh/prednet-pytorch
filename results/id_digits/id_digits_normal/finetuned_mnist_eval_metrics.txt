@@ -2,6 +2,9 @@ Evaluation Mode: Full Sequence
 ==================================================
 Model: KITTI + finetuned + Moving MNIST
 MSE: 0.0021
+MSE_STD: 0.0028
 SNR: 8.9150
+SNR_STD: 4.7515
 SSIM: 0.9686
+SSIM_STD: 0.0346
 --------------------------------------------------

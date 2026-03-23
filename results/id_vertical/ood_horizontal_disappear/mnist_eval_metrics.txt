@@ -2,11 +2,17 @@ Evaluation Mode: Anomaly -> End
 ==================================================
 Model: Moving MNIST
 MSE: 0.0058
+MSE_STD: 0.0023
 SNR: -0.9813
+SNR_STD: 1.0677
 SSIM: 0.9192
+SSIM_STD: 0.0240
 --------------------------------------------------
 Model: Copy previous frame
 MSE: 0.0060
+MSE_STD: 0.0022
 SNR: -1.1351
+SNR_STD: 3.4978
 SSIM: 0.9375
+SSIM_STD: 0.0186
 --------------------------------------------------

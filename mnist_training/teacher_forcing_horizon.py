@@ -2,7 +2,7 @@
 Teacher forcing horizon evaluation: measure how many ground-truth frames
 are needed before the model generates stable predictions.
 
-Computes both the overall summary metrics (averages) AND the 
+Computes both the overall summary metrics (averages) AND the
 frame-by-frame metrics to visualize error spikes and recovery times.
 """
 
@@ -34,7 +34,7 @@ def compute_metrics_for_horizon(
     anomaly_t: int,
 ) -> Dict[str, Any]:
     """
-    Run the model with teacher-forcing horizon k and compute both frame-by-frame 
+    Run the model with teacher-forcing horizon k and compute both frame-by-frame
     and summary MSE, SNR, SSIM.
     """
     device = next(model.parameters()).device
@@ -83,7 +83,7 @@ def compute_metrics_for_horizon(
     # Calculate the original summary metrics (averaging over the valid extrapolation window)
     t_start = max(anomaly_t, horizon) if eval_anomaly_only else max(1, horizon)
     valid_frames = [t for t in range(t_start, nt)]
-    
+
     summary_mse = float(np.mean([avg_frame_mse[t] for t in valid_frames])) if valid_frames else float("nan")
     summary_snr = float(np.mean([avg_frame_snr[t] for t in valid_frames])) if valid_frames else float("nan")
     summary_ssim = float(np.mean([avg_frame_ssim[t] for t in valid_frames])) if valid_frames else float("nan")
@@ -109,7 +109,7 @@ def run_teacher_forcing_sweep(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     weights_file = os.path.join(mnist_settings.WEIGHTS_DIR, mnist_settings.MNIST_MODEL)
-    
+
     stack_sizes = (1, 48, 96, 192)
     R_stack_sizes = stack_sizes
     A_filt_sizes = (3, 3, 3)
@@ -141,7 +141,7 @@ def run_teacher_forcing_sweep(
     print(f"  [TF] Running sweep for k in {horizons}...")
     for k in horizons:
         metrics = compute_metrics_for_horizon(
-            model=model, loader=loader, nt=nt, horizon=k, 
+            model=model, loader=loader, nt=nt, horizon=k,
             eval_anomaly_only=eval_anomaly_only, anomaly_t=anomaly_t,
         )
         results.append(metrics)
@@ -159,26 +159,26 @@ def run_teacher_forcing_sweep(
 
     fig, axes = plt.subplots(1, 3, figsize=(12, 4))
     axes[0].plot(k_arr, mse_arr, marker="o", linewidth=2)
-    axes[0].set_xlabel("Teacher Forcing Horizon (k)")
+    axes[0].set_xlabel("Number of Ground-Truth Conditioning Frames")
     axes[0].set_ylabel("MSE")
     axes[0].set_title("MSE")
     axes[0].grid(True, alpha=0.3)
     axes[0].set_xticks(k_arr)
-    
+
     axes[1].plot(k_arr, ssim_arr, marker="o", linewidth=2)
-    axes[1].set_xlabel("Teacher Forcing Horizon (k)")
+    axes[1].set_xlabel("Number of Ground-Truth Conditioning Frames")
     axes[1].set_ylabel("SSIM")
     axes[1].set_title("SSIM")
     axes[1].grid(True, alpha=0.3)
     axes[1].set_xticks(k_arr)
-    
+
     axes[2].plot(k_arr, snr_arr, marker="o", linewidth=2)
-    axes[2].set_xlabel("Teacher Forcing Horizon (k)")
+    axes[2].set_xlabel("Number of Ground-Truth Conditioning Frames")
     axes[2].set_ylabel("SNR (dB)")
     axes[2].set_title("SNR")
     axes[2].grid(True, alpha=0.3)
     axes[2].set_xticks(k_arr)
-    
+
     plt.suptitle("Overall Adaptation Speed vs Teacher Forcing Horizon")
     plt.tight_layout()
     summary_plot_path = os.path.join(out_dir, "summary_teacher_forcing_horizon.png")
@@ -213,7 +213,7 @@ def run_teacher_forcing_sweep(
         plt.grid(True, alpha=0.3)
         plt.xticks(frames)
         plt.tight_layout()
-        
+
         plot_path = os.path.join(out_dir, filename)
         plt.savefig(plot_path)
         plt.close()

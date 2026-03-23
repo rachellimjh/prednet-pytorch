@@ -49,6 +49,9 @@ MODEL_SPECS = {
 }
 
 METRICS = ["MSE", "SNR", "SSIM"]
+STD_METRICS = ["MSE_STD", "SNR_STD", "SSIM_STD"]
+METRIC_LABELS = {"MSE": "MSE ↓", "SNR": "SNR ↑", "SSIM": "SSIM ↑"}
+ALL_METRIC_KEYS = METRICS + STD_METRICS
 
 _FLOAT_RE = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
 
@@ -60,7 +63,7 @@ def _extract_floats(line: str) -> List[float]:
 def parse_metrics_file(path: str, fallback_model_label: str | None = None) -> Dict[str, Dict[str, float]]:
     """
     Parse a unified metrics file. Supports:
-    - New format: "Model: NAME" blocks with MSE/SNR/SSIM
+    - New format: "Model: NAME" blocks with MSE/SNR/SSIM (and optional *_STD lines)
     - Old format: plain MSE/SNR/SSIM lines (no Model: line)
     Returns:
         {model_name: {metric_name: value}}
@@ -80,14 +83,14 @@ def parse_metrics_file(path: str, fallback_model_label: str | None = None) -> Di
                 models[current_model] = {}
                 continue
 
-            for metric in METRICS:
-                if line.startswith(metric):
+            for key in ALL_METRIC_KEYS:
+                if line.startswith(key + ":") or line.startswith(key + " "):
                     nums = _extract_floats(line)
                     if nums:
                         if current_model is not None:
-                            models[current_model][metric] = nums[0]
+                            models[current_model][key] = nums[0]
                         else:
-                            orphan_metrics[metric] = nums[0]
+                            orphan_metrics[key] = nums[0]
                     break
 
     # Old format: no Model: line, just metrics at top level
@@ -245,7 +248,7 @@ def plot_bar_charts(all_metrics):
 
         for metric in METRICS:
 
-            plt.figure(figsize=(17, 10))
+            fig, ax = plt.subplots(figsize=(26, 10))
 
             x_positions = []
             labels = []
@@ -274,60 +277,67 @@ def plot_bar_charts(all_metrics):
                 for i in range(num_models)
             ]
 
-            # collect all metric values (for y scaling)
+            # Collect metric values and bar tops (val + std) for y scaling
+            std_key = f"{metric}_STD"
             all_vals = []
+            all_tops = []
             for cond in cond_lookup:
                 for model in models:
                     if metric in cond[model]:
-                        all_vals.append(cond[model][metric])
+                        val = cond[model][metric]
+                        err = cond[model].get(std_key, 0.0)
+                        all_vals.append(val)
+                        all_tops.append(val + err)
 
             y_min = min(all_vals)
-            y_max = max(all_vals)
-            margin = (y_max - y_min) * 0.05
-            lower = y_min - margin
-            upper = y_max + margin
-            plt.ylim(lower, upper)
+            top_max = max(all_tops)
+            data_range = (top_max - y_min) or 1.0
+            lower = y_min - data_range * 0.05
+            upper = top_max + data_range * 0.10
+            ax.set_ylim(lower, upper)
 
             for model_idx, model_name in enumerate(models):
 
                 y_vals = []
+                y_errs = []
                 for cond in cond_lookup:
                     y_vals.append(cond[model_name].get(metric, float("nan")))
+                    y_errs.append(cond[model_name].get(std_key, 0.0))
 
                 bar_positions = [
                     xi + offsets[model_idx] for xi in x_positions
                 ]
 
-                bars = plt.bar(
+                ax.bar(
                     bar_positions,
                     y_vals,
                     width=bar_width,
                     label=model_name,
+                    yerr=y_errs,
+                    capsize=3,
+                    error_kw={"elinewidth": 1.0, "capthick": 1.0},
                 )
 
-                # value labels (fixed overlap)
-                for xpos_bar, val in zip(bar_positions, y_vals):
-                    if not (val != val):  # skip NaN
-                        plt.text(
-                            xpos_bar,
-                            val + margin * 0.05,
-                            str(val),
-                            ha="center",
-                            va="bottom",
-                            fontsize=7,
-                            rotation=90,
-                        )
 
-            plt.xticks(x_positions, labels, rotation=0)
-            plt.title(f"{metric}")
-            plt.legend()
+            ax.set_xticks(x_positions)
+            ax.set_xticklabels(labels, rotation=0, fontsize=12)
+            ax.tick_params(axis='y', labelsize=12)
+            ax.set_ylabel(METRIC_LABELS[metric], fontsize=16, labelpad=10)
+            ax.grid(axis='y', linestyle='--', alpha=0.3)
+            ax.legend(
+                loc="best",
+                fontsize=13,
+                framealpha=0.9,
+                edgecolor='gray',
+            )
 
             plt.tight_layout()
 
             out_path = os.path.join(
                 output_dir, f"{metric.lower()}_bar_plot.png"
             )
-            plt.savefig(out_path)
+            plt.savefig(out_path, bbox_inches="tight", dpi=300)
+            plt.savefig(out_path.replace(".png", ".pdf"), bbox_inches="tight")
             plt.close()
 
             print(f"Saved {metric} bar plot to {out_path}")

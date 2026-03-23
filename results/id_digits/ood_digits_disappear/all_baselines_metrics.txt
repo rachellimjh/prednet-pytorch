@@ -1,0 +1,39 @@
+Evaluation Mode: Anomaly -> End
+==================================================
+Model: Copy previous frame
+MSE: 0.0066
+MSE_STD: 0.0024
+SNR: -1.6493
+SNR_STD: 1.1109
+SSIM: 0.9296
+SSIM_STD: 0.0191
+--------------------------------------------------
+Model: KITTI trained
+MSE: 0.0046
+MSE_STD: 0.0014
+SNR: -0.1700
+SNR_STD: 1.0129
+SSIM: 0.1140
+SSIM_STD: 0.0371
+--------------------------------------------------
+Model: KITTI trained + finetuned on MNIST
+MSE: 0.0010
+MSE_STD: 0.0015
+SNR: 9.4237
+SNR_STD: 4.9542
+SSIM: 0.9847
+SSIM_STD: 0.0205
+--------------------------------------------------
+Model: Trained on MNIST
+MSE: 0.0007
+MSE_STD: 0.0016
+SNR: 16.3157
+SNR_STD: 8.1722
+SSIM: 0.9904
+SSIM_STD: 0.0196
+--------------------------------------------------
+Standard Deviation across all 4 models:
+MSE std:  0.0025
+SNR std:  7.3266
+SSIM std: 0.3707
+==================================================
